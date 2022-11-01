@@ -340,10 +340,12 @@ def train(train_loader, model, criterion, optimizer, epoch, device, args):
         # measure data loading time
         data_time.update(time.time() - end)
 
+        print("Moving data")
         # move data to the same device as model
         images = images.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
 
+        print("computing pitput")
         # compute output
         output = model(images)
         loss = criterion(output, target)
@@ -354,6 +356,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device, args):
         top1.update(acc1[0], images.size(0))
         top5.update(acc5[0], images.size(0))
 
+        print("Doing backprop")
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
