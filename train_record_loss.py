@@ -192,6 +192,8 @@ def main_worker(gpu, ngpus_per_node, args):
         device = torch.device("mps")
     else:
         device = torch.device("cpu")
+
+    print("Using device", device)
     # define loss function (criterion), optimizer, and learning rate scheduler
     criterion = nn.CrossEntropyLoss().to(device)
 
@@ -286,6 +288,7 @@ def main_worker(gpu, ngpus_per_node, args):
         validate(val_loader, model, criterion, args)
         return
 
+    print("Beginning training")
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
