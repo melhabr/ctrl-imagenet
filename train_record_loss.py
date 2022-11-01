@@ -5,7 +5,11 @@ import shutil
 import time
 import warnings
 from enum import Enum
+import json
 
+import id_folder
+
+import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
@@ -228,13 +232,21 @@ def main_worker(gpu, ngpus_per_node, args):
         train_dataset = datasets.FakeData(1281167, (3, 224, 224), 1000, transforms.ToTensor())
         val_dataset = datasets.FakeData(50000, (3, 224, 224), 1000, transforms.ToTensor())
     else:
-        traindir = os.path.join(args.data, 'train')
-        valdir = os.path.join(args.data, 'val')
+        traindir = os.path.join(args.data, 'train_blurred')
+        valdir = os.path.join(args.data, 'val_blurred')
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
         train_dataset = datasets.ImageFolder(
             traindir,
+            transforms.Compose([
+                transforms.RandomResizedCrop(224),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+            ]))
+
+        id_dataset = id_folder.IDFolder(traindir, 
             transforms.Compose([
                 transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
@@ -262,6 +274,10 @@ def main_worker(gpu, ngpus_per_node, args):
         train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
 
+    id_loader = torch.utils.data.DataLoader(
+        id_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+        num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+
     val_loader = torch.utils.data.DataLoader(
         val_dataset, batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True, sampler=val_sampler)
@@ -276,6 +292,9 @@ def main_worker(gpu, ngpus_per_node, args):
 
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch, device, args)
+
+        # Record loss
+        record_loss(id_loader, model, nn.CrossEntropyLoss(reduction="none").to(device), args, epoch)
 
         # evaluate on validation set
         acc1 = validate(val_loader, model, criterion, args)
@@ -296,6 +315,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, is_best)
+        break
 
 
 def train(train_loader, model, criterion, optimizer, epoch, device, args):
@@ -342,6 +362,63 @@ def train(train_loader, model, criterion, optimizer, epoch, device, args):
 
         if i % args.print_freq == 0:
             progress.display(i + 1)
+
+def record_loss(data_loader, model, criterion, args, epoch_num):
+
+    batch_time = AverageMeter('Avg Time', ':6.3f', Summary.NONE)
+    loss_progress = AverageMeter('Avg Loss', ':.4e', Summary.NONE)
+    progress = ProgressMeter(
+        len(data_loader) + (args.distributed and (len(data_loader.sampler) * args.world_size < len(data_loader.dataset))),
+        [batch_time, loss_progress],
+        prefix='Recording Losses: ')
+
+    def run_record_loss(loader, base_progress=0):
+        with torch.no_grad():
+            end = time.time()
+            loss_dict = {}
+            for i, ((ids, images), target) in enumerate(loader):
+                i = base_progress + i
+                if args.gpu is not None and torch.cuda.is_available():
+                    images = images.cuda(args.gpu, non_blocking=True)
+                if torch.backends.mps.is_available():
+                    images = images.to('mps')
+                    target = target.to('mps')
+                if torch.cuda.is_available():
+                    target = target.cuda(args.gpu, non_blocking=True)
+
+                # compute output
+                output = model(images)
+                losses = criterion(output, target).cpu().numpy()
+   
+                for j in range(losses.size):
+                    loss_dict[ids[j]] = losses[j]
+
+                # measure accuracy and record loss
+                loss_progress.update(np.mean(losses).item(), images.size(0))
+
+                # measure elapsed time
+                batch_time.update(time.time() - end)
+                end = time.time()
+
+                if i % args.print_freq == 0:
+                    progress.display(i + 1)
+            save_loss_epoch(loss_dict, epoch_num)
+
+    # switch to evaluate mode
+    model.eval()
+
+    run_record_loss(data_loader)
+
+    if args.distributed and (len(data_loader.sampler) * args.world_size < len(data_loader.dataset)):
+        # TODO: Understand how distributed needs to be changed here. For now don't use distributed
+        aux_val_dataset = Subset(data_loader.dataset,
+                                 range(len(data_loader.sampler) * args.world_size, len(data_loader.dataset)))
+        aux_val_loader = torch.utils.data.DataLoader(
+            aux_val_dataset, batch_size=args.batch_size, shuffle=False,
+            num_workers=args.workers, pin_memory=True)
+        run_record_loss(aux_val_loader, len(data_loader))
+
+    progress.display_summary()
 
 
 def validate(val_loader, model, criterion, args):
@@ -410,6 +487,10 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
+
+def save_loss_epoch(losses, epoch_num):
+    with open("/scratch/gpfs/melhabr/losses/{}.json".format(epoch_num), "w") as outfile:
+        json.dump(losses, outfile)
 
 class Summary(Enum):
     NONE = 0
