@@ -3,7 +3,7 @@ import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 
 TRAIN_DIR = "/scratch/gpfs/DATASETS/imagenet/ilsvrc_2012_2017_face_obfuscation"
-WORKERS = 4
+WORKERS = 1
 
 def main():
 
@@ -21,11 +21,13 @@ def main():
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=256, shuffle=True,
-        num_workers=4, pin_memory=True, sampler=None)
+        num_workers=WORKERS, pin_memory=True, sampler=None)
 
-    print("Starting iteration")
-    for i, (images, target) in enumerate(train_loader):
-        print("Loading batch {} of dataset".format(i))
+    print("Loading iterator")
+    loader_iter = iter(train_loader)
+    print("Iterator loaded. Getting a data sample")
+    sample = next(loader_iter)
+    print("Finished")
 
 if __name__ == '__main__':
     main()
