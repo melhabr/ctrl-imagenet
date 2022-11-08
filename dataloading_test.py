@@ -27,5 +27,5 @@ def main():
     for i, (images, target) in enumerate(train_loader):
         print("Loading batch {} of dataset".format(i))
 
-if __name__ == 'main':
+if __name__ == '__main__':
     main()
