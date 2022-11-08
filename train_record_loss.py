@@ -194,6 +194,7 @@ def main_worker(gpu, ngpus_per_node, args):
         device = torch.device("cpu")
 
     print("Using device", device)
+    print("Testing with num workers:", args.workers)
     # define loss function (criterion), optimizer, and learning rate scheduler
     criterion = nn.CrossEntropyLoss().to(device)
 
@@ -294,6 +295,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch, device, args)
+        break
 
         # Record loss
         record_loss(id_loader, model, nn.CrossEntropyLoss(reduction="none").to(device), args, epoch)
@@ -317,7 +319,6 @@ def main_worker(gpu, ngpus_per_node, args):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, is_best)
-        break
 
 
 def train(train_loader, model, criterion, optimizer, epoch, device, args):
@@ -365,6 +366,7 @@ def train(train_loader, model, criterion, optimizer, epoch, device, args):
 
         if i % args.print_freq == 0:
             progress.display(i + 1)
+    progress.display_summary()
 
 def record_loss(data_loader, model, criterion, args, epoch_num):
 
