@@ -313,7 +313,9 @@ def train(train_loader, model, criterion, optimizer, epoch, device, args):
     model.train()
 
     end = time.time()
+    print("Beginning train epoch")
     for i, (images, target) in enumerate(train_loader):
+        print("loaded, executing")
         # measure data loading time
         data_time.update(time.time() - end)
 
