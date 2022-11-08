@@ -234,8 +234,8 @@ def main_worker(gpu, ngpus_per_node, args):
         train_dataset = datasets.FakeData(1281167, (3, 224, 224), 1000, transforms.ToTensor())
         val_dataset = datasets.FakeData(50000, (3, 224, 224), 1000, transforms.ToTensor())
     else:
-        traindir = os.path.join(args.data, 'train')
-        valdir = os.path.join(args.data, 'val')
+        traindir = os.path.join(args.data, 'train_blurred')
+        valdir = os.path.join(args.data, 'val_blurred')
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
@@ -337,16 +337,13 @@ def train(train_loader, model, criterion, optimizer, epoch, device, args):
     end = time.time()
     print("Beginning training")
     for i, (images, target) in enumerate(train_loader):
-        print("Entered loop")
         # measure data loading time
         data_time.update(time.time() - end)
 
-        print("Moving data")
         # move data to the same device as model
         images = images.to(device, non_blocking=True)
         target = target.to(device, non_blocking=True)
 
-        print("computing pitput")
         # compute output
         output = model(images)
         loss = criterion(output, target)
@@ -357,7 +354,6 @@ def train(train_loader, model, criterion, optimizer, epoch, device, args):
         top1.update(acc1[0], images.size(0))
         top5.update(acc5[0], images.size(0))
 
-        print("Doing backprop")
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
@@ -565,7 +561,7 @@ class ProgressMeter(object):
     def display(self, batch):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
         entries += [str(meter) for meter in self.meters]
-        print('\t'.join(entries))
+        print('\t'.join(entries), flush=True)
         
     def display_summary(self):
         entries = [" *"]
