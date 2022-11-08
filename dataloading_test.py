@@ -23,11 +23,10 @@ def main():
         train_dataset, batch_size=256, shuffle=True,
         num_workers=WORKERS, pin_memory=True, sampler=None)
 
-    print("Loading iterator")
-    loader_iter = iter(train_loader)
-    print("Iterator loaded. Getting a data sample")
-    sample = next(loader_iter)
-    print("Finished")
+    print("Starting iteration")
+    for i, (images, target) in enumerate(train_loader):
+        print("Loading batch {} of dataset".format(i))
+        break
 
 if __name__ == '__main__':
     main()
