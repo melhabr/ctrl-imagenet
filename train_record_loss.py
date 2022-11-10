@@ -295,7 +295,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch, device, args)
-        break
+        continue
 
         # Record loss
         record_loss(id_loader, model, nn.CrossEntropyLoss(reduction="none").to(device), args, epoch)
