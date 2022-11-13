@@ -395,7 +395,7 @@ def record_loss(data_loader, model, criterion, args, epoch_num):
 
                 # compute output
                 output = model(images)
-                losses = criterion(output, target).cpu().numpy()
+                losses = criterion(output, target).cpu().numpy().astype(float)
    
                 for j in range(losses.size):
                     loss_dict[ids[j]] = losses[j]
