@@ -289,25 +289,18 @@ def main_worker(gpu, ngpus_per_node, args):
         validate(val_loader, model, criterion, args)
         return
 
-    start_epoch = time.time()
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
-        start_train = time.time()
         train(train_loader, model, criterion, optimizer, epoch, device, args)
-        print("Total training time:", time.time() - start_train)
 
         # Record loss
-        start_loss = time.time()
         record_loss(id_loader, model, nn.CrossEntropyLoss(reduction="none").to(device), args, epoch)
-        print("Total time for one loss storage:", time.time() - start_loss)
 
         # evaluate on validation set
-        start_val = time.time()
         acc1 = validate(val_loader, model, criterion, args)
-        print("Total validation time:", time.time() - start_val)
         
         scheduler.step()
         
@@ -325,9 +318,6 @@ def main_worker(gpu, ngpus_per_node, args):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, is_best)
-        print("Total epoch time:", time.time() - start_epoch)
-        break
-
 
 def train(train_loader, model, criterion, optimizer, epoch, device, args):
     batch_time = AverageMeter('Time', ':6.3f')
@@ -502,7 +492,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
         shutil.copyfile(filename, 'model_best.pth.tar')
 
 def save_loss_epoch(losses, epoch_num):
-    with open("/scratch/gpfs/melhabr/losses/{}.json".format(epoch_num), "w") as outfile:
+    with open("/Users/melhabr/Documents/College/Materials/Thesis/ctrl-imagenet/losses/{}.json".format(epoch_num), "w") as outfile:
         json.dump(losses, outfile)
 
 class Summary(Enum):
