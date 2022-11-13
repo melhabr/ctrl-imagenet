@@ -492,7 +492,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
         shutil.copyfile(filename, 'model_best.pth.tar')
 
 def save_loss_epoch(losses, epoch_num):
-    with open("/Users/melhabr/Documents/College/Materials/Thesis/ctrl-imagenet/losses/{}.json".format(epoch_num), "w") as outfile:
+    with open("/scratch/gpfs/melhabr/losses/{}.json".format(epoch_num), "w") as outfile:
         json.dump(losses, outfile)
 
 class Summary(Enum):
