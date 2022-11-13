@@ -289,21 +289,25 @@ def main_worker(gpu, ngpus_per_node, args):
         validate(val_loader, model, criterion, args)
         return
 
+    start_epoch = time.time()
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
-        #train(train_loader, model, criterion, optimizer, epoch, device, args)
+        start_train = time.time()
+        train(train_loader, model, criterion, optimizer, epoch, device, args)
+        print("Total training time:", time.time() - start_train)
 
         # Record loss
         start_loss = time.time()
         record_loss(id_loader, model, nn.CrossEntropyLoss(reduction="none").to(device), args, epoch)
         print("Total time for one loss storage:", time.time() - start_loss)
-        continue
 
         # evaluate on validation set
+        start_val = time.time()
         acc1 = validate(val_loader, model, criterion, args)
+        print("Total validation time:", time.time() - start_val)
         
         scheduler.step()
         
@@ -321,6 +325,8 @@ def main_worker(gpu, ngpus_per_node, args):
                 'optimizer' : optimizer.state_dict(),
                 'scheduler' : scheduler.state_dict()
             }, is_best)
+        print("Total epoch time:", time.time() - start_epoch)
+        break
 
 
 def train(train_loader, model, criterion, optimizer, epoch, device, args):
@@ -566,7 +572,7 @@ class ProgressMeter(object):
     def display(self, batch):
         entries = [self.prefix + self.batch_fmtstr.format(batch)]
         entries += [str(meter) for meter in self.meters]
-        print('\t'.join(entries), flush=True)
+        print('\t'.join(entries))
         
     def display_summary(self):
         entries = [" *"]
