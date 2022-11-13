@@ -294,11 +294,13 @@ def main_worker(gpu, ngpus_per_node, args):
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, device, args)
-        continue
+        #train(train_loader, model, criterion, optimizer, epoch, device, args)
 
         # Record loss
+        start_loss = time.time()
         record_loss(id_loader, model, nn.CrossEntropyLoss(reduction="none").to(device), args, epoch)
+        print("Total time for one loss storage:", time.time() - start_loss)
+        continue
 
         # evaluate on validation set
         acc1 = validate(val_loader, model, criterion, args)
@@ -494,7 +496,8 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
         shutil.copyfile(filename, 'model_best.pth.tar')
 
 def save_loss_epoch(losses, epoch_num):
-    print(epoch_num, losses)
+    with open("/scratch/gpfs/melhabr/losses/{}.json".format(epoch_num), "w") as outfile:
+        json.dump(losses, outfile)
 
 class Summary(Enum):
     NONE = 0
