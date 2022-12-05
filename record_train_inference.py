@@ -395,7 +395,7 @@ def validate(id_loader, model, criterion, args):
 
                 if i % args.print_freq == 0:
                     progress.display(i + 1)
-            with open("/scratch/gpfs/melhabr/losses/inference_results.json", "w") as outfile:
+            with open("/scratch/gpfs/melhabr/inference_results.json", "w") as outfile:
                 json.dump(result_dict, outfile)
             
 
