@@ -9,10 +9,6 @@ undergraduate thesis for the Princeton Electrical and Engineering Department.
 Please see the README for information.
 """
 
-# TODO: Add masks to repo (reformatted)
-# TODO: Add corrections to repo (reformatted)
-# TODO: add readme
-
 import argparse
 import json
 import os
